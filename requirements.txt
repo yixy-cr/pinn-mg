@@ -1,0 +1,7 @@
+torch>=2.0
+numpy
+scikit-learn
+gmsh>=4.0
+pyyaml
+pytest
+matplotlib

@@ -1,0 +1,24 @@
+model:
+  hidden_dim: 128
+  num_layers: 4
+  activation: tanh
+
+training:
+  epochs: 5000
+  learning_rate: 1.0e-3
+  lr_decay: 0.95
+  decay_interval: 1000
+
+physics:
+  lambda: 1.0
+  mu: 0.35
+  eq_weight: 0.0
+
+mesh:
+  nx: 16
+  ny: 16
+  nz: 32
+
+boundary:
+  svr_C: 1.0
+  svr_epsilon: 0.01
