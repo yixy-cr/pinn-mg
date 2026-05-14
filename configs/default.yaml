@@ -4,15 +4,15 @@ model:
   activation: tanh
 
 training:
-  epochs: 5000
-  learning_rate: 1.0e-3
-  lr_decay: 0.95
-  decay_interval: 1000
+  epochs: 15000
+  learning_rate: 1.0e-4
+  lr_decay: 0.98
+  decay_interval: 2000
 
 physics:
   lambda: 1.0
   mu: 0.35
-  eq_weight: 0.0
+  eq_weight: 1.0  # 启用物理约束
 
 mesh:
   nx: 16
