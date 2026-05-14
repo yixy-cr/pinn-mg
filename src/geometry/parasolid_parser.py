@@ -109,7 +109,7 @@ class ParasolidParser:
         # 尝试加载对应的mesh文件
         mesh_path = self.filepath.replace('.x_t', '_g.msh').replace('.xmt_bin', '_g.msh')
 
-        # 首先检查是否��对应的mesh文件
+        # 首先检查是否有对应的mesh文件
         if os.path.exists(mesh_path):
             return self.load_from_mesh(mesh_path)
 
@@ -128,14 +128,60 @@ class ParasolidParser:
         for line in lines:
             if line.startswith('**') or not line.strip():
                 continue
-            try:
-                values = [float(v) for v in line.split()]
-                if len(values) >= 3:
-                    points.append(values[:3])
-            except ValueError:
-                continue
+            # 只提取 .62 标记前的坐标
+            parts = line.split()
+            nums = []
+            for p in parts:
+                if p == '.62':
+                    break
+                try:
+                    val = float(p)
+                    if abs(val) < 0.1:  # 过滤掉异常大值
+                        nums.append(val)
+                except ValueError:
+                    continue
 
-        self.boundary_points = np.array(points) if points else np.array([])
+            if len(nums) >= 3:
+                points.extend(nums[:3])
+
+        if not points:
+            return np.array([])
+
+        # 转换为坐标点
+        raw_pts = np.array(points[:len(points)//3*3]).reshape(-1, 3)
+
+        # 计算径向坐标
+        r_raw = np.sqrt(raw_pts[:,0]**2 + raw_pts[:,1]**2)
+        z_raw = raw_pts[:,2]
+
+        # 缩放到物理单位 (基于目标几何: R=0.0055~0.0067, Z=0~0.01)
+        r_min, r_max = r_raw.min(), r_raw.max()
+        z_min, z_max = z_raw.min(), z_raw.max()
+
+        # 目标范围
+        target_r_min, target_r_max = 0.0055, 0.0067
+        target_z_min, target_z_max = 0.0, 0.01
+
+        # 线性缩放
+        scale_r = (target_r_max - target_r_min) / (r_max - r_min) if r_max > r_min else 1.0
+        offset_r = target_r_min - r_min * scale_r
+
+        scale_z = (target_z_max - target_z_min) / (z_max - z_min) if z_max > z_min else 1.0
+        offset_z = target_z_min - z_min * scale_z
+
+        r_scaled = r_raw * scale_r + offset_r
+        z_scaled = z_raw * scale_z + offset_z
+
+        # 重建坐标 (保持角度不变)
+        theta = np.arctan2(raw_pts[:,1], raw_pts[:,0])
+        self.boundary_points = np.column_stack([
+            r_scaled * np.cos(theta),
+            r_scaled * np.sin(theta),
+            z_scaled
+        ])
+
+        print(f"从x_t解析: {len(self.boundary_points)} 点, R={self.boundary_points[:,0].min():.4f}~{self.boundary_points[:,0].max():.4f}")
+
         return self.boundary_points
 
     def get_boundary_box(self):
